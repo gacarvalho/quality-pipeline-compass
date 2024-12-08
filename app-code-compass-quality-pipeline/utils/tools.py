@@ -10,161 +10,196 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote_plus
 from unidecode import unidecode
-from pyspark.sql.functions import regexp_extract
+from tools.object_validate import google_play_schema, mongodb_schema, play_store_schema, get_column_patterns
 
-def processing_reviews():
+###########################################################################################################
+# Validação leitura da origem e carga
+###########################################################################################################
+def read_parquet_data(spark: SparkSession, path: str) -> DataFrame:
+    """Lê dados Parquet e trata erros de leitura."""
     try:
-        # Inicializa a sessão Spark
-        spark = SparkSession.builder.appName("CompassAggregation").getOrCreate()
-
-        logging.info("Iniciando o processo de agregação de dados")
-
-        # Carregar dados dos arquivos Parquet
-        df_google_play = spark.read.parquet('/santander/silver/compass/reviews/googlePlay')
-        df_mongodb = spark.read.parquet('/santander/silver/compass/reviews/mongodb')
-        df_apple_store = spark.read.parquet('/santander/silver/compass/reviews/appleStore')
-
-        # Adicionar nome do arquivo, se necessário
-        df_google_play = df_google_play.withColumn("file_name", input_file_name())
-        df_mongodb = df_mongodb.withColumn("file_name", input_file_name())
-        df_apple_store = df_apple_store.withColumn("file_name", input_file_name())
-
-        # Processar os dados e extrair a data (odate) do nome do arquivo
-        df_google_play = df_google_play.withColumn("odate", regexp_extract("file_name", r"odate=(\d{8})", 1))
-        df_mongodb = df_mongodb.withColumn("odate", regexp_extract("file_name", r"odate=(\d{8})", 1))
-        df_apple_store = df_apple_store.withColumn("odate", regexp_extract("file_name", r"odate=(\d{8})", 1))
-
-        # Verificar se os DataFrames foram carregados corretamente
-        if df_google_play is not None:
-            logging.info("Estrutura do DataFrame Google Play:")
-            df_google_play.printSchema()
-            df_google_play.show(5)
-        else:
-            logging.warning("Nenhum dado carregado para Google Play")
-
-        if df_mongodb is not None:
-            logging.info("Estrutura do DataFrame MongoDB:")
-            df_mongodb.printSchema()
-            df_mongodb.show(5)
-        else:
-            logging.warning("Nenhum dado carregado para MongoDB")
-
-        if df_apple_store is not None:
-            logging.info("Estrutura do DataFrame Apple Store:")
-            df_apple_store.printSchema()
-            df_apple_store.show(5)
-        else:
-            logging.warning("Nenhum dado carregado para Apple Store")
-
-        # Verificar se algum dos DataFrames está vazio
-        if df_google_play.count() == 0 and df_mongodb.count() == 0 and df_apple_store.count() == 0:
-            logging.error("Nenhum dado foi carregado para unificar.")
-            return None
-
-        # Equalizando as colunas
-        df_google_play_equalizado = df_google_play.select(
-            col("id").alias("id"),
-            col("app").alias("app"),
-            col("rating").cast("string").alias("rating"), 
-            col("iso_date").alias("iso_date"),
-            col("title").alias("title"),
-            col("snippet").alias("snippet"),
-            col("historical_data").alias("historical_data"),
-            col("odate").alias("odate"),
-            col("file_name").alias("file_name")
-        ).withColumn("app_source", lit("google_play"))
-
-        df_mongodb_equalizado = df_mongodb.select(
-            col("id").alias("id"),
-            col("app").alias("app"),
-            col("rating").cast("string").alias("rating"),
-            col("timestamp").alias("iso_date"), 
-            col("comment").alias("title"), 
-            col("comment").alias("snippet"),
-            col("historical_data").alias("historical_data"),
-            col("odate").alias("odate"),
-            col("file_name").alias("file_name")
-        ).withColumn("app_source", lit("internal_database_mongodb"))
-
-        df_apple_store_equalizado = df_apple_store.select(
-            col("id").alias("id"),
-            col("app").alias("app"),
-            col("im_rating").cast("string").alias("rating"),
-            col("updated").alias("iso_date"),
-            col("title").alias("title"),
-            col("content").alias("snippet"),
-            col("historical_data").alias("historical_data"),
-            col("odate").alias("odate"),
-            col("file_name").alias("file_name")
-        ).withColumn("app_source", lit("apple_store"))
-
-        # Removendo a coluna 'historical_data' dos DataFrames
-        df_google_play_equalizado_sem_historical = df_google_play_equalizado.drop("historical_data")
-        df_mongodb_equalizado_sem_historical = df_mongodb_equalizado.drop("historical_data")
-        df_apple_store_equalizado_sem_historical = df_apple_store_equalizado.drop("historical_data")
-
-
-
-        # Unificar os DataFrames
-        df_unificado = df_google_play_equalizado_sem_historical.union(df_mongodb_equalizado_sem_historical).union(df_apple_store_equalizado_sem_historical)
-
-
-        # Verificar se o DataFrame unificado é válido e retorná-lo
-        if df_unificado is not None:
-            logging.info("Estrutura do DataFrame Unificado:")
-            df_unificado.printSchema()
-            df_unificado.show(5)
-            return df_unificado  # Retorna o DataFrame unificado
-        else:
-            logging.error("Erro ao criar o DataFrame unificado.")
-            return None
-
+        return spark.read.parquet(path)
     except Exception as e:
-        logging.error(f"Erro ao processar os dados: {e}")
+        logging.error(f"Erro ao ler o arquivo Parquet no caminho: {path}. Erro: {e}")
         raise
 
-    
-def save_reviews(reviews_df: DataFrame, directory: str):
+###########################################################################################################
+# Função para validar DataFrames
+###########################################################################################################
+def validate_dataframes(dataframes: dict, layer: str) -> DataFrame:
     """
-    Salva os dados do DataFrame no formato Delta no diretório especificado.
+    Valida que todos os DataFrames possuem dados e realiza a união.
+    """
+    empty_sources = [source for source, df in dataframes.items() if df.count() == 0]
 
-    Args:
-        reviews_df (DataFrame): DataFrame PySpark contendo as avaliações.
-        directory (str): Caminho do diretório onde os dados serão salvos.
-    """
+    if empty_sources:
+        error_message = f"As seguintes fontes estão vazias na camada {layer}: {', '.join(empty_sources)}"
+        logging.error(error_message)
+        raise ValueError(error_message)
+
+    logging.info(f"Todos os dados na camada {layer} foram validados com sucesso.")
+    # União dos DataFrames
+    df_all = dataframes['google_play'].union(dataframes['mongodb']).union(dataframes['apple_store'])
+    return df_all, dataframes['google_play'], dataframes['mongodb'], dataframes['apple_store']
+
+###########################################################################################################
+# Validação do processo de carga
+###########################################################################################################
+def validate_source_load(spark: SparkSession, date_ref: str, type_processing: str):
     try:
-        # Verifica se o diretório existe e cria-o se não existir
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        logging.info("Iniciando o processo de validação de dados.")
 
-        # Escrever os dados no formato Delta
-        # reviews_df.write.format("delta").mode("overwrite").save(directory)
-        reviews_df.write.option("compression", "snappy").mode("overwrite").parquet(directory)
-        logging.info(f"Dados salvos em {directory} no formato Delta")
+        if type_processing not in {"bronze", "silver"}:
+            raise ValueError(f"Tipo de processamento '{type_processing}' inválido. Use 'bronze' ou 'silver'.")
 
+        # Definindo caminhos para cada camada
+        base_path = "/santander"
+        paths = {
+            "google_play": f"{base_path}/{type_processing}/compass/reviews/googlePlay/odate={date_ref}",
+            "mongodb": f"{base_path}/{type_processing}/compass/reviews/mongodb/odate={date_ref}",
+            "apple_store": f"{base_path}/{type_processing}/compass/reviews/appleStore/odate={date_ref}",
+        }
+
+        # Lendo os dados
+        dataframes = {source: read_parquet_data(spark, path) for source, path in paths.items()}
+
+        logging.info(f"Iniciando validação da camada '{type_processing}' para a data {date_ref}.")
+        for source, df in dataframes.items():
+            volume = df.count()
+            logging.info(f"Fonte {source}: volumetria = {volume}")
+
+        # Validando e unindo os DataFrames
+        return validate_dataframes(dataframes, type_processing)
+
+    except ValueError as ve:
+        logging.error(f"Erro de validação: {ve}")
+        raise
     except Exception as e:
-        logging.error(f"Erro ao salvar os dados: {e}")
-        exit(1)
+        logging.error(f"Erro inesperado ao processar os dados: {e}")
+        raise
 
+###########################################################################################################
+# Validação de schemas
+###########################################################################################################
+def validate_schema(spark: SparkSession, df: DataFrame, source_name: str) -> DataFrame:
+    """
+    Valida o esquema de um DataFrame comparando com o esquema esperado para uma fonte específica.
+    Retorna um DataFrame com os resultados da validação e lança uma exceção em caso de erro.
 
-def save_dataframe(df, path, label):
+    :param spark: Instância do SparkSession.
+    :param df: DataFrame a ser validado.
+    :param source_name: Nome da fonte (e.g., "google_play", "mongodb", "play_store").
+    :return: DataFrame contendo os resultados da validação.
+    :raises ValueError: Se o esquema do DataFrame for inválido ou a fonte for desconhecida.
     """
-    Salva o DataFrame em formato parquet e loga a operação.
+    # Dicionário de esquemas esperados
+    schema_dict = {
+        "google_play": google_play_schema(),
+        "mongodb": mongodb_schema(),
+        "play_store": play_store_schema()
+    }
+
+    # Dados iniciais para os resultados
+    result_data = []
+
+    # Verifica se a fonte fornecida está no dicionário de esquemas
+    if source_name not in schema_dict:
+        result_data.append({
+            "source": source_name,
+            "validation_status": "Unknown Source",
+            "expected_schema": None,
+            "current_schema": str(df.schema)
+        })
+        raise ValueError(f"Fonte desconhecida: {source_name}")
+
+    expected_schema = schema_dict[source_name]
+    validation_status = "Valid" if df.schema == expected_schema else "Invalid"
+
+    result_data.append({
+        "source": source_name,
+        "validation_status": validation_status,
+        "expected_schema": str(expected_schema),
+        "current_schema": str(df.schema)
+    })
+
+    if validation_status == "Invalid":
+        raise ValueError(
+            f"Esquema inválido para a fonte '{source_name}'.\n"
+            f"Expected Schema: {expected_schema}\n"
+            f"Actual Schema: {df.schema}"
+        )
+
+    result_df = spark.createDataFrame(result_data)
+    return result_df
+
+###########################################################################################################
+# Validação Pattern
+###########################################################################################################
+def validate_patterns(df: DataFrame, column_patterns: dict) -> DataFrame:
     """
-    try:
-        if df.limit(1).count() > 0:  # Verificar existência de dados
-            logging.info(f"Salvando dados {label} para: {path}")
-            save_reviews(df, path)
+    Valida as colunas do DataFrame com base nos padrões fornecidos.
+
+    :param df: DataFrame a ser validado.
+    :param column_patterns: Dicionário com os padrões de validação para cada coluna.
+    :return: DataFrame contendo os resultados da validação.
+    """
+    validation_results = []
+
+    for column, rules in column_patterns.items():
+        if column in df.columns:
+            column_validation = []
+
+            if "type" in rules:
+                column_type = rules["type"]
+                if column_type == "string":
+                    column_validation.append(df[column].cast("string").isNotNull())
+                elif column_type == "int":
+                    column_validation.append(df[column].cast("int").isNotNull())
+
+            if "regex" in rules:
+                regex_pattern = rules["regex"]
+                column_validation.append(df[column].rlike(regex_pattern))
+
+            if "not_null" in rules and rules["not_null"]:
+                column_validation.append(df[column].isNotNull())
+
+            if "min" in rules:
+                column_validation.append(df[column] >= rules["min"])
+            if "max" in rules:
+                column_validation.append(df[column] <= rules["max"])
+
+            combined_condition = F.when(F.and_(*column_validation), F.lit("Valid")).otherwise(F.lit("Invalid"))
+            validation_results.append(combined_condition.alias(column))
         else:
-            logging.warning(f"Nenhum dado {label} foi encontrado!")
-    except Exception as e:
-        logging.error(f"Erro ao salvar dados {label}: {e}", exc_info=True)
-        
+            validation_results.append(F.lit(f"Coluna {column} não encontrada").alias(column))
+
+    return df.select(*validation_results)
+
+def execute_validation(spark: SparkSession, df: DataFrame):
+    """
+    Executa a validação das colunas do DataFrame utilizando os padrões definidos.
+
+    :param spark: Instância do SparkSession.
+    :param df: DataFrame a ser validado.
+    """
+    try:
+        # Obter os padrões de validação
+        column_patterns = get_column_patterns()
+
+        # Validar o DataFrame com base nos padrões
+        validation_result_df = validate_patterns(df, column_patterns)
+
+        # Exibe o resultado da validação
+        validation_result_df.show()
+
+    except ValueError as ve:
+        print(f"Erro de validação: {ve}")
 
 
 def write_to_mongo(dados_feedback: dict, table_id: str, overwrite=False):
     """
     Escreve dados em uma coleção MongoDB, com a opção de sobrescrever a coleção.
-    
+
     Args:
         dados_feedback (dict or list): Dados a serem inseridos na coleção (um único dicionário ou uma lista de dicionários).
         table_id (str): Nome da coleção onde os dados serão inseridos.
@@ -192,70 +227,19 @@ def write_to_mongo(dados_feedback: dict, table_id: str, overwrite=False):
 
         # Se o parâmetro overwrite for True, exclui todos os documentos da coleção antes de inserir novos dados
         if overwrite:
-            collection.delete_many({})  # Remove todos os documentos da coleção
+            collection.delete_many({})
 
-        # Inserir dados no MongoDB
-        if isinstance(dados_feedback, dict):  # Verifica se os dados são um dicionário
+        if isinstance(dados_feedback, dict):
             collection.insert_one(dados_feedback)
-        elif isinstance(dados_feedback, list):  # Verifica se os dados são uma lista
+        elif isinstance(dados_feedback, list):
             collection.insert_many(dados_feedback)
         else:
-            print("Os dados devem ser um dicionário ou uma lista de dicionários.")
-    
+            raise ValueError("Os dados fornecidos não são válidos para inserção.")
+
     except Exception as e:
-        print(f"Erro ao conectar ou inserir no MongoDB: {e}")
-    finally:
-        # Garante que a conexão será fechada
-        client.close()
-
-
-def define_schema() -> StructType:
-    """
-    Define o schema para os dados dos reviews.
-    """
-    return StructType([
-        StructField("avatar", StringType(), True),
-        StructField("date", StringType(), True),
-        StructField("id", StringType(), True),
-        StructField("iso_date", StringType(), True),
-        StructField("likes", LongType(), True),
-        StructField("rating", DoubleType(), True),
-        StructField("response", MapType(StringType(), StringType(), True), True),
-        StructField("snippet", StringType(), True),
-        StructField("title", StringType(), True)
-    ])
-
-def read_data(spark: SparkSession, schema: StructType, pathSource: str) -> DataFrame:
-    """
-    Lê os dados de um caminho Parquet e retorna um DataFrame.
-    """
-    try:
-        df = spark.read.schema(schema).parquet(pathSource) \
-            .withColumn("app", regexp_extract(input_file_name(), "/googlePlay/(.*?)/odate=", 1)) \
-            .drop("response")
-        df.printSchema()
-        df.show(truncate=False)
-        return df
-    except Exception as e:
-        logging.error(f"Erro ao ler os dados: {e}", exc_info=True)
+        logging.error(f"Erro ao salvar os dados no MongoDB: {e}")
         raise
 
-def save_data(valid_df: DataFrame, invalid_df: DataFrame):
-    """
-    Salva os dados válidos e inválidos nos caminhos apropriados.
-    """
-
-    # Definindo caminhos
-    datePath = datetime.now().strftime("%Y%m%d")
-    path_target = f"/santander/gold/compass/reviews/apps_santander_aggregate/odate={datePath}/"
-    path_target_fail = f"/santander/gold/compass/reviews_fail/apps_santander_aggregate/odate={datePath}/"
-    
-    try:
-        save_dataframe(valid_df, path_target, "valido")
-        save_dataframe(invalid_df, path_target_fail, "invalido")
-    except Exception as e:
-        logging.error(f"Erro ao salvar os dados: {e}", exc_info=True)
-        raise
 
 def save_metrics(metrics_json: str):
     """
@@ -267,32 +251,3 @@ def save_metrics(metrics_json: str):
         logging.info(f"Métricas da aplicação salvas: {metrics_json}")
     except json.JSONDecodeError as e:
         logging.error(f"Erro ao processar métricas: {e}", exc_info=True)
-
-
-def save_data_gold(df, collection_name: str):
-    """
-    Sobrescreve os dados de uma coleção no MongoDB com o conteúdo de um DataFrame.
-    
-    Args:
-        df (pd.DataFrame): DataFrame contendo os dados a serem inseridos.
-        collection_name (str): Nome da coleção no MongoDB.
-    """
-    try:
-        # Verifica se o DataFrame está vazio
-        if df.count() == 0:
-            logging.warning(f"A coleção '{collection_name}' não foi atualizada pois o DataFrame está vazio.")
-            return
-        
-        # Converte o DataFrame em uma lista de dicionários
-        #data = json.loads(df.to_json(orient="records"))
-        # Converte o DataFrame do PySpark em uma lista de dicionários (JSON)
-        data = [json.loads(row) for row in df.toJSON().collect()]
-
-
-        # Salva no MongoDB
-        write_to_mongo(data, collection_name, overwrite=True)
-        
-        logging.info(f"Dados da coleção '{collection_name}' atualizados com sucesso! {len(data)} documentos inseridos.")
-    
-    except Exception as e:
-        logging.error(f"Erro ao sobrescrever a coleção '{collection_name}': {e}", exc_info=True)
