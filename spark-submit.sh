@@ -13,6 +13,18 @@ error_exit() {
   exit 1
 }
 
+# Função para validar as variáveis necessárias
+validate_params() {
+
+  if [[ -z "$SPARK_HOME" ]]; then
+    error_exit "Variável SPARK_HOME não definida!"
+  fi
+
+  if [[ -z "$PARAM1" ]]; then
+    error_exit "Os parâmetros PARAM1 é obrigatório!"
+  fi
+}
+
 # Função para montar e executar o Spark Submit
 run_spark_submit() {
 
@@ -55,8 +67,8 @@ run_spark_submit() {
     --conf spark.yarn.appMasterEnv.MONGO_HOST=mongodb \
     --conf spark.yarn.appMasterEnv.MONGO_PORT=27017 \
     --conf spark.yarn.appMasterEnv.MONGO_DB=compass \
-    --name app-code-compass-quality-pipeline\
-    /app/app-code-compass-quality-pipeline.py"
+    --name app-code-compass-quality-pipeline-$PARAM1\
+    /app/app-code-compass-quality-pipeline.py $PARAM1"
 
   # Exibe o comando para depuração
   log "Comando spark-submit que será executado: $spark_cmd"

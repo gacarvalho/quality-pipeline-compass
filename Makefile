@@ -9,7 +9,7 @@ create-network:
 	docker network create hadoop_network
 
 build-app-quality-pipeline-compass:
-	docker build -t iamgacarvalho/dmc-quality-pipeline-compass:$(VERSION_REPOSITORY_DOCKER)  ./application/quality-pipeline-compass
+	docker build -t iamgacarvalho/dmc-quality-pipeline-compass:$(VERSION_REPOSITORY_DOCKER)  .
 	docker push iamgacarvalho/dmc-quality-pipeline-compass:$(VERSION_REPOSITORY_DOCKER)
 
 restart-docker:
