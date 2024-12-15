@@ -1,33 +1,82 @@
-name: Docker Image CI
+name: Build, Test, and Deploy with Docker Compose
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-
   build:
-
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Docker login
-        uses: docker/login-action@v3.3.0
-        with:
-          username: ${{ secrets.COMPASS_USER_DOCKERHUB }}
-          password: ${{ secrets.COMPASS_PASSWORD_DOCKERHUB }}
+      # Checkout do repositório
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v6.10.0
+      # Login no DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
         with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          no-cache: true
-          tags: |
-            iamgacarvalho/dmc-quality-pipeline-compass:v1
-            iamgacarvalho/dmc-quality-pipeline-compass:1.0.0
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Construção da imagem com variáveis dinâmicas
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg FOLDER_REPO=repo-quality-pipeline-compass \
+            -t iamgacarvalho/dmc-quality-pipeline-compass:1.0.0 .
+
+      # Push da imagem para o DockerHub
+      - name: Push Docker image
+        run: |
+          docker push iamgacarvalho/dmc-quality-pipeline-compass:1.0.0
+
+  test:
+    name: Test Docker Compose Services
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      # Checkout do repositório para acessar o arquivo docker-compose.yml
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Testar os serviços do Docker Compose
+      - name: Run Docker Compose and Test Services
+        run: |
+          docker-compose -f docker-compose.yml up -d
+          docker-compose -f docker-compose.yml ps
+          sleep 10
+          docker logs $(docker ps --filter "ancestor=iamgacarvalho/dmc-quality-pipeline-compass:1.0.0" -q) | tee output.log
+          docker-compose -f docker-compose.yml down
+        env:
+          DOCKER_IMAGE: iamgacarvalho/dmc-quality-pipeline-compass:1.0.0
+
+  deploy:
+    name: Deploy Services
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      # Checkout do repositório para acessar o arquivo docker-compose.yml
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Login no DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Implantar os serviços usando Docker Compose
+      - name: Deploy Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml pull
+          docker-compose -f docker-compose.yml up -d
