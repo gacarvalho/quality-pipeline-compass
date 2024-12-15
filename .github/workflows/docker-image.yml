@@ -17,7 +17,7 @@ jobs:
       # Checkout do repositório
       - name: Checkout code
         uses: actions/checkout@v4
-  secrets
+
       # Login no DockerHub
       - name: Log in to DockerHub
         uses: docker/login-action@v2
