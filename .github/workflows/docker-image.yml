@@ -18,11 +18,11 @@ jobs:
       - name: Docker login
         uses: docker/login-action@v3.3.0
         with:
-          username: ${{  secrets.COMPASS_USER_DOCKERHUB  }}
-          password:  ${{  secrets.COMPASS_PASSWORD_DOCKERHUB  }}
+          username: ${{ secrets.COMPASS_USER_DOCKERHUB }}
+          password: ${{ secrets.COMPASS_PASSWORD_DOCKERHUB }}
 
       - name: Build and push Docker images
-        uses: docker/build-push-action@v6.10.0]
+        uses: docker/build-push-action@v6.10.0
         with:
           context: .
           file: .
@@ -30,7 +30,3 @@ jobs:
           tags: |
             iamgacarvalho/dmc-quality-pipeline-compass:v1
             iamgacarvalho/dmc-quality-pipeline-compass:1.0.0
-          
-
-
-          
