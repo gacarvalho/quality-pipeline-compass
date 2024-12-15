@@ -4,8 +4,6 @@ from pyspark.sql import SparkSession
 from datetime import datetime
 from tools import *
 from object_validate import *
-from pyspark.sql import functions as F
-from pyspark.sql.window import Window
 
 
 # Configuração de logging
@@ -26,9 +24,12 @@ def main():
         with spark_session() as spark:
 
             logging.info("[*] Capturando as variaveis de entrada!")
-            datePath = datetime.now().strftime("%Y%m%d")
 
+            # CAPTURA ARGUMENTO DE ENTRADA #############################################################################
             type_processing = args[0]
+
+            # PARAMETROS DE DATA E PATHS ###############################################################################
+            datePath = datetime.now().strftime("%Y%m%d")
             path_rejeitados_schema = f"/santander/quality/compass/reviews/schema/odate={datePath}"
             path_rejeitados_pattern_google = f"/santander/quality/compass/reviews/pattern/google_play/odate={datePath}"
             path_rejeitados_pattern_apple= f"/santander/quality/compass/reviews/pattern/apple_store/odate={datePath}"
@@ -50,7 +51,7 @@ def main():
                                  f"[*]         volumetria Apple Store: {df_apple_store.count()} ")
 
                     if df_google_play.count() | df_mongodb.count() | df_apple_store.count() == 0:
-                        logging.info("[*] Origem vazia!")
+                        logging.info("[*] Origem identificada vazia!")
                         sys.exit(1)
 
                 except ValueError as e:

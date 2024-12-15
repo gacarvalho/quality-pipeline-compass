@@ -1,17 +1,13 @@
-import os, json, logging, sys, requests, unicodedata, pymongo, pyspark.sql.functions as F
+import os, json, logging, sys, requests, unicodedata, pymongo
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.window import Window
 from pyspark.sql.functions import (
-    regexp_extract, max as spark_max, col, when, input_file_name, lit, date_format, to_date, array, size, expr, collect_list
+    regexp_extract, col, when, lit, array, size, expr
 )
 from pyspark.sql.types import (
     MapType, StringType, ArrayType, BinaryType, StructType, StructField, DoubleType, LongType
 )
-
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote_plus
-from unidecode import unidecode
 from object_validate import *
 
 ###########################################################################################################
@@ -354,7 +350,7 @@ def save_reviews(reviews_df: DataFrame, directory: str):
         logging.info(f"[*] Dados salvos em {directory} no formato Delta")
     except Exception as e:
         logging.error(f"[*] Erro ao salvar os dados: {e}")
-        exit(1)
+        sys.exit(1)
 
 def save_dataframe(df, path, label):
     """
