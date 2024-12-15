@@ -25,8 +25,9 @@ jobs:
         uses: docker/build-push-action@v6.10.0
         with:
           context: .
-          file: .
+          file: ./Dockerfile
           push: true
+          no-cache: true
           tags: |
             iamgacarvalho/dmc-quality-pipeline-compass:v1
             iamgacarvalho/dmc-quality-pipeline-compass:1.0.0
