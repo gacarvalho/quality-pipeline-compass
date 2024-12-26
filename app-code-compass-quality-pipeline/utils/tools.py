@@ -198,7 +198,7 @@ def validated_pattern_google_play(df: DataFrame) -> DataFrame:
     # Condições para validação
     id_condition = ~col("id").rlike(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
     app_condition = ~col("app").rlike(r"^[a-z0-9\-]+$")
-    rating_condition = ~col("rating").cast("string").rlike(r"^[2"r"-5](\.\d+)?$")
+    rating_condition = ~col("rating").cast("string").rlike(r"^[1"r"-5](\.\d+)?$")
     iso_date_condition = ~col("iso_date").rlike(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
     title_condition = ~col("title").rlike(r"^.+$")
     snippet_condition = ~col("snippet").rlike(r"^.+$")
@@ -250,7 +250,7 @@ def validated_pattern_apple_store(df: DataFrame) -> DataFrame:
     name_client_condition = ~col("name_client").rlike(r"^.+$")
     app_condition = ~col("app").rlike(r"^[a-zA-Z0-9\-]+$")
     im_version_condition = ~col("im_version").rlike(r"^\d+(\.\d+)*$")
-    im_rating_condition = ~col("im_rating").cast("string").rlike(r"^[1-5](\.\d+)?$")
+    im_rating_condition = ~col("im_rating").cast("string").rlike(r"^[0-5](\.\d+)?$")
     title_condition = ~col("title").rlike(r"^.+$")
     content_condition = col("content").isNull()
 
