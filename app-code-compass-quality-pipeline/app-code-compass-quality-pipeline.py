@@ -7,7 +7,12 @@ from object_validate import *
 
 
 # Configuração de logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuração básica do logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 def main():
 
@@ -44,11 +49,26 @@ def main():
                 try:
                     df_google_play, df_mongodb, df_apple_store = validate_source_load(spark, datePath, type_processing)
 
-                    logging.info(f"\n[*] Validação da carga origem: \n" +
-                                 f"[*]         Carga origem: {type_processing}, \n" +
-                                 f"[*]         volumetria Google Play: {df_google_play.count()} \n" +
-                                 f"[*]         volumetria MongoDB (internal databases): {df_mongodb.count()} \n" +
-                                 f"[*]         volumetria Apple Store: {df_apple_store.count()} ")
+                    # Contagens das volumetrias
+                    google_play_count = df_google_play.count()
+                    mongodb_count = df_mongodb.count()
+                    apple_store_count = df_apple_store.count()
+
+                    # Construindo o texto estruturado
+                    log_message = (
+                        "\n"
+                        "-------------------------------------------------------\n"
+                        " [*] Validação da Carga Origem\n"
+                        "-------------------------------------------------------\n"
+                        f" > Tipo de Processamento   : {type_processing}\n"
+                        f" > Volumetria Google Play  : {google_play_count}\n"
+                        f" > Volumetria MongoDB      : {mongodb_count}\n"
+                        f" > Volumetria Apple Store  : {apple_store_count}\n"
+                        "-------------------------------------------------------"
+                    )
+
+                    # Logando a mensagem
+                    logging.info(log_message)
 
                     if df_google_play.count() | df_mongodb.count() | df_apple_store.count() == 0:
                         logging.info("[*] Origem identificada vazia!")
