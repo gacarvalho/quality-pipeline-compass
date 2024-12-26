@@ -295,7 +295,7 @@ def validated_pattern_mongodb(df: DataFrame) -> DataFrame:
     customer_id_condition = col("customer_id").isNull()
     cpf_condition = ~col("cpf").rlike(r"^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$")
     app_condition = ~col("app").rlike(r"^[a-zA-Z0-9\-]+$")
-    rating_condition = ~col("rating").cast("string").rlike(r"^[1-5](\.\d+)?$")
+    rating_condition = ~col("rating").cast("string").rlike(r"^[0-5](\.\d+)?$")
     timestamp_condition = ~col("timestamp").rlike(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$")
     comment_condition = col("comment").isNull()
     app_version_condition = ~col("app_version").rlike(r"^\d+(\.\d+)*$")
