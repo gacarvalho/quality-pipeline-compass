@@ -72,14 +72,17 @@ def google_play_schema_silver():
         StructField("title", StringType(), True),
         StructField("snippet", StringType(), True),
         StructField("historical_data", ArrayType(
-            ArrayType(StructType([
-                StructField("title", StringType(), True),
-                StructField("snippet", StringType(), True),
-                StructField("app", StringType(), True),
-                StructField("rating", StringType(), True),
-                StructField("iso_date", StringType(), True)
-            ]))
-        ), True)
+                StructType([
+                    StructField("title", StringType(), True),
+                    StructField("snippet", StringType(), True),
+                    StructField("app", StringType(), True),
+                    StructField("rating", StringType(), True),
+                    StructField("iso_date", StringType(), True)
+                ]),
+                True
+            ),
+            True
+        )
     ])
 
 # Esquema para MongoDB
