@@ -203,11 +203,6 @@ def validated_pattern_google_play(df: DataFrame) -> DataFrame:
     title_condition = ~col("title").rlike(r"^.+$")
     snippet_condition = ~col("snippet").rlike(r"^.+$")
 
-    # Condição para validar `historical_data`
-    historical_data_condition = when(
-        size(col("historical_data")) == 0,
-        lit(True)  # Falha se não há dados em `historical_data`
-    ).otherwise(lit(False))
 
     # Criação da coluna de falhas
     df = df.withColumn(
@@ -218,8 +213,7 @@ def validated_pattern_google_play(df: DataFrame) -> DataFrame:
             when(rating_condition, lit("rating")).otherwise(lit(None)),
             when(iso_date_condition, lit("iso_date")).otherwise(lit(None)),
             when(title_condition, lit("title")).otherwise(lit(None)),
-            when(snippet_condition, lit("snippet")).otherwise(lit(None)),
-            when(historical_data_condition, lit("historical_data")).otherwise(lit(None)),
+            when(snippet_condition, lit("snippet")).otherwise(lit(None))
         )
     ).withColumn(
         "failed_Columns",
