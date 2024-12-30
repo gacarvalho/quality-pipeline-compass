@@ -1,4 +1,5 @@
 import logging
+import json
 import sys
 from pyspark.sql import SparkSession
 from datetime import datetime
@@ -196,6 +197,22 @@ def main():
 
     except Exception as e:
         logging.error(f"[*] An error occurred: {e}", exc_info=True)
+
+        # JSON de erro
+        error_metrics = {
+            "data_e_hora": datetime.now().isoformat(),
+            "camada": "quality",
+            "grupo": "compass",
+            "job": "apple_store_reviews",
+            "relevancia": "1",
+            "torre": "SBBR_COMPASS",
+            "erro": str(e)
+        }
+
+        metrics_json = json.dumps(error_metrics)
+
+        # Salvar métricas de erro no MongoDB
+        save_metrics_job_fail(metrics_json)
         
 
 def spark_session():
