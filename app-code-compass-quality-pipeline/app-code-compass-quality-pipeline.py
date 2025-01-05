@@ -18,7 +18,7 @@ logging.basicConfig(
 def main():
 
     # Capturar argumentos da linha de comando
-    args = sys.argv[2:]
+    args = sys.argv[1:]
 
     # Verificar se o número correto de argumentos foi passado
     if len(args) != 2:
@@ -33,7 +33,7 @@ def main():
             logging.info("[*] Capturando as variaveis de entrada!")
 
             # CAPTURA ARGUMENTO DE ENTRADA #############################################################################
-            type_processing = args[0]
+            type_processing = args[1]
 
             # PARAMETROS DE DATA E PATHS ###############################################################################
             datePath = datetime.now().strftime("%Y%m%d")
