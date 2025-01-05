@@ -18,16 +18,17 @@ logging.basicConfig(
 def main():
 
     # Capturar argumentos da linha de comando
-    args = sys.argv[1:]
+    args = sys.argv[2:]
 
     # Verificar se o número correto de argumentos foi passado
-    if len(args) != 1:
-        print("Usage: spark-submit app.py <type_processing> ")
+    if len(args) != 2:
+        print("Usage: spark-submit app.py <env> <type_processing> ")
         sys.exit(1)
 
+    # Criação da sessão Spark
+    spark = spark_session()
+
     try:
-        # Criação da sessão Spark
-        with spark_session() as spark:
 
             logging.info("[*] Capturando as variaveis de entrada!")
 
