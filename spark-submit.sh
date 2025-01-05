@@ -24,7 +24,7 @@ validate_params() {
   fi
 
   if [[ -z "$PARAM1" ]]; then
-    error_exit "Os parâmetros PARAM1 é obrigatório!"
+    error_exit "O parâmetro PARAM1 é obrigatório!"
   fi
 }
 
@@ -112,7 +112,7 @@ log "************************************************************"
 log "Iniciando Execução de Spark Submit"
 log "************************************************************"
 
-echo "parametros: $CONFIG_ENV $PARAM1 $PARAM2"
+echo "parametros: $CONFIG_ENV $PARAM1"
 
 # Define o arquivo de configuração com base no ambiente
 if [[ "$CONFIG_ENV" == "pre" ]]; then
