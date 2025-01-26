@@ -86,6 +86,31 @@ def google_play_schema_silver():
     ])
 
 # Esquema para MongoDB
+# def mongodb_schema_silver():
+#     return StructType([
+#         StructField('id', StringType(), True),
+#         StructField('customer_id', StringType(), True),
+#         StructField('cpf', StringType(), True),
+#         StructField('app', StringType(), True),
+#         StructField('rating', StringType(), True),
+#         StructField('timestamp', StringType(), True),
+#         StructField('comment', StringType(), True),
+#         StructField('app_version', StringType(), True),
+#         StructField('os_version', StringType(), True),
+#         StructField('os', StringType(), True),
+#         StructField('historical_data', ArrayType(ArrayType(StructType([
+#             StructField('customer_id', StringType(), True),
+#             StructField('cpf', StringType(), True),
+#             StructField('app', StringType(), True),
+#             StructField('comment', StringType(), True),
+#             StructField('rating', StringType(), True),
+#             StructField('timestamp', StringType(), True),
+#             StructField('app_version', StringType(), True),
+#             StructField('os_version', StringType(), True),
+#             StructField('os', StringType(), True)
+#         ]), True), True), True)
+#     ])
+
 def mongodb_schema_silver():
     return StructType([
         StructField('id', StringType(), True),
@@ -98,7 +123,7 @@ def mongodb_schema_silver():
         StructField('app_version', StringType(), True),
         StructField('os_version', StringType(), True),
         StructField('os', StringType(), True),
-        StructField('historical_data', ArrayType(ArrayType(StructType([
+        StructField('historical_data', ArrayType(StructType([
             StructField('customer_id', StringType(), True),
             StructField('cpf', StringType(), True),
             StructField('app', StringType(), True),
@@ -108,8 +133,29 @@ def mongodb_schema_silver():
             StructField('app_version', StringType(), True),
             StructField('os_version', StringType(), True),
             StructField('os', StringType(), True)
-        ]), True), True), True)
+        ]), True))
     ])
+
+
+# def apple_store_schema_silver():
+#     return StructType([
+#         StructField("id", StringType(), True),
+#         StructField("name_client", StringType(), True),
+#         StructField("app", StringType(), True),
+#         StructField("im_version", StringType(), True),
+#         StructField("im_rating", StringType(), True),
+#         StructField("title", StringType(), True),
+#         StructField("content", StringType(), True),
+#         StructField("updated", StringType(), True),
+#         StructField("historical_data", ArrayType(
+#             ArrayType(StructType([
+#                 StructField("title", StringType(), True),
+#                 StructField("content", StringType(), True),
+#                 StructField("app", StringType(), True),
+#                 StructField("im_version", StringType(), True),
+#                 StructField("im_rating", StringType(), True)
+#             ]), True), True))
+#     ])
 
 def apple_store_schema_silver():
     return StructType([
@@ -121,14 +167,13 @@ def apple_store_schema_silver():
         StructField("title", StringType(), True),
         StructField("content", StringType(), True),
         StructField("updated", StringType(), True),
-        StructField("historical_data", ArrayType(
-            ArrayType(StructType([
-                StructField("title", StringType(), True),
-                StructField("content", StringType(), True),
-                StructField("app", StringType(), True),
-                StructField("im_version", StringType(), True),
-                StructField("im_rating", StringType(), True)
-            ]), True), True))
+        StructField("historical_data", ArrayType(StructType([
+            StructField("title", StringType(), True),
+            StructField("content", StringType(), True),
+            StructField("app", StringType(), True),
+            StructField("im_version", StringType(), True),
+            StructField("im_rating", StringType(), True)
+        ]), True))
     ])
 
 
