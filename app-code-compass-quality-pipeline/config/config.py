@@ -13,7 +13,7 @@ class Config(BaseSettings):
     base_path: str = "/santander"
 
     # Caminhos para dados rejeitados
-    path_rejeitados_schema: str = f"/santander/quality/compass/reviews/schema//odate={odate}"
+    path_rejeitados_schema: str = f"/santander/quality/compass/reviews/schema/odate={odate}"
     path_rejeitados_pattern_google: str = f"/santander/quality/compass/reviews/pattern/google_play/odate={odate}"
     path_rejeitados_pattern_apple: str = f"/santander/quality/compass/reviews/pattern/apple_store/odate={odate}"
     path_rejeitados_pattern_mongo: str = f"/santander/quality/compass/reviews/pattern/internal_databases/odate={odate}"
