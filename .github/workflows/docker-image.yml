@@ -10,7 +10,7 @@ on:
 
 env:
   DOCKER_IMAGE: "iamgacarvalho/dmc-quality-pipeline-compass"
-  DOCKER_TAG: "1.0.0"
+  DOCKER_TAG: "1.0.1"
 
 jobs:
   build:

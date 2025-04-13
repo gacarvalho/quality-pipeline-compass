@@ -16,6 +16,7 @@ def google_play_schema_bronze():
         StructField('iso_date', StringType(), True),
         StructField('likes', LongType(), True),
         StructField('rating', DoubleType(), True),
+        StructField("response", MapType(StringType(), StringType(), True), True),
         StructField('snippet', StringType(), True),
         StructField('title', StringType(), True)
     ])
@@ -31,7 +32,7 @@ def mongodb_schema_bronze():
         StructField('os_version', StringType(), True),
         StructField('country', StringType(), True),
         StructField('age', IntegerType(), True),
-        StructField('customer_id', StringType(), True), # mudar para string
+        StructField('customer_id', StringType(), True),
         StructField('cpf', StringType(), True),
         StructField('app_version', StringType(), True),
         StructField('rating', IntegerType(), True),
@@ -67,7 +68,8 @@ def google_play_schema_silver():
     return StructType([
         StructField("id", StringType(), True),
         StructField("app", StringType(), True),
-        StructField("rating", DoubleType(), True),
+        StructField("segmento", StringType(), True),
+        StructField("rating", StringType(), True),
         StructField("iso_date", StringType(), True),
         StructField("title", StringType(), True),
         StructField("snippet", StringType(), True),
@@ -76,6 +78,7 @@ def google_play_schema_silver():
                     StructField("title", StringType(), True),
                     StructField("snippet", StringType(), True),
                     StructField("app", StringType(), True),
+                    StructField("segmento", StringType(), True),
                     StructField("rating", StringType(), True),
                     StructField("iso_date", StringType(), True)
                 ]),
@@ -85,31 +88,6 @@ def google_play_schema_silver():
         )
     ])
 
-# Esquema para MongoDB
-# def mongodb_schema_silver():
-#     return StructType([
-#         StructField('id', StringType(), True),
-#         StructField('customer_id', StringType(), True),
-#         StructField('cpf', StringType(), True),
-#         StructField('app', StringType(), True),
-#         StructField('rating', StringType(), True),
-#         StructField('timestamp', StringType(), True),
-#         StructField('comment', StringType(), True),
-#         StructField('app_version', StringType(), True),
-#         StructField('os_version', StringType(), True),
-#         StructField('os', StringType(), True),
-#         StructField('historical_data', ArrayType(ArrayType(StructType([
-#             StructField('customer_id', StringType(), True),
-#             StructField('cpf', StringType(), True),
-#             StructField('app', StringType(), True),
-#             StructField('comment', StringType(), True),
-#             StructField('rating', StringType(), True),
-#             StructField('timestamp', StringType(), True),
-#             StructField('app_version', StringType(), True),
-#             StructField('os_version', StringType(), True),
-#             StructField('os', StringType(), True)
-#         ]), True), True), True)
-#     ])
 
 def mongodb_schema_silver():
     return StructType([
@@ -117,6 +95,7 @@ def mongodb_schema_silver():
         StructField('customer_id', StringType(), True),
         StructField('cpf', StringType(), True),
         StructField('app', StringType(), True),
+        StructField('segmento', StringType(), True),
         StructField('rating', StringType(), True),
         StructField('timestamp', StringType(), True),
         StructField('comment', StringType(), True),
@@ -128,6 +107,7 @@ def mongodb_schema_silver():
             StructField('cpf', StringType(), True),
             StructField('app', StringType(), True),
             StructField('comment', StringType(), True),
+            StructField('segmento', StringType(), True),
             StructField('rating', StringType(), True),
             StructField('timestamp', StringType(), True),
             StructField('app_version', StringType(), True),
@@ -136,26 +116,6 @@ def mongodb_schema_silver():
         ]), True))
     ])
 
-
-# def apple_store_schema_silver():
-#     return StructType([
-#         StructField("id", StringType(), True),
-#         StructField("name_client", StringType(), True),
-#         StructField("app", StringType(), True),
-#         StructField("im_version", StringType(), True),
-#         StructField("im_rating", StringType(), True),
-#         StructField("title", StringType(), True),
-#         StructField("content", StringType(), True),
-#         StructField("updated", StringType(), True),
-#         StructField("historical_data", ArrayType(
-#             ArrayType(StructType([
-#                 StructField("title", StringType(), True),
-#                 StructField("content", StringType(), True),
-#                 StructField("app", StringType(), True),
-#                 StructField("im_version", StringType(), True),
-#                 StructField("im_rating", StringType(), True)
-#             ]), True), True))
-#     ])
 
 def apple_store_schema_silver():
     return StructType([
@@ -167,10 +127,12 @@ def apple_store_schema_silver():
         StructField("title", StringType(), True),
         StructField("content", StringType(), True),
         StructField("updated", StringType(), True),
+        StructField("segmento", StringType(), True),
         StructField("historical_data", ArrayType(StructType([
             StructField("title", StringType(), True),
             StructField("content", StringType(), True),
             StructField("app", StringType(), True),
+            StructField("segmento", StringType(), True),
             StructField("im_version", StringType(), True),
             StructField("im_rating", StringType(), True)
         ]), True))
